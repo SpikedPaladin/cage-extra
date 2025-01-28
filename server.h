@@ -14,10 +14,22 @@
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
+#include <dbus/dbus.h>
 
 enum cg_multi_output_mode {
 	CAGE_MULTI_OUTPUT_MODE_EXTEND,
 	CAGE_MULTI_OUTPUT_MODE_LAST,
+};
+
+enum SplitMode {
+	NONE,
+	ANDROID,
+	OTHER,
+};
+
+enum SplitSide {
+	LEFT,
+	RIGHT,
 };
 
 struct cg_server {
@@ -61,6 +73,11 @@ struct cg_server {
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 
+	DBusConnection *conn;
+
+	enum SplitMode mode;
+	enum SplitSide side;
+	bool flipped;
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	bool return_app_code;

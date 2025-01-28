@@ -495,6 +495,12 @@ handle_touch_down(struct wl_listener *listener, void *data)
 
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->touch->base, event->x, event->y, &lx, &ly);
+	if (seat->server->flipped) {
+		lx = 1920 - lx;
+		ly = 1080 - ly;
+	}
+
+	printf("Touch down: %f:%f | %f:%f\n", event->x, event->y, lx, ly);
 
 	double sx, sy;
 	struct wlr_surface *surface;
@@ -546,6 +552,10 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->touch->base, event->x, event->y, &lx, &ly);
+	if (seat->server->flipped) {
+		lx = 1920 - lx;
+		ly = 1080 - ly;
+	}
 
 	double sx, sy;
 	struct wlr_surface *surface;
@@ -964,5 +974,5 @@ seat_center_cursor(struct cg_seat *seat)
 	/* Place the cursor in the center of the output layout. */
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(seat->server->output_layout, NULL, &layout_box);
-	wlr_cursor_warp(seat->cursor, NULL, layout_box.width / 2, layout_box.height / 2);
+	wlr_cursor_warp(seat->cursor, NULL, 1920, 1080);
 }

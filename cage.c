@@ -51,6 +51,7 @@
 #include <wlr/xwayland.h>
 #endif
 
+#include "dbus.h"
 #include "idle_inhibit_v1.h"
 #include "output.h"
 #include "seat.h"
@@ -280,6 +281,7 @@ main(int argc, char *argv[])
 {
 	struct cg_server server = {.log_level = WLR_INFO};
 	struct wl_event_source *sigchld_source = NULL;
+	struct wl_event_source *dbus_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
 
@@ -587,6 +589,13 @@ main(int argc, char *argv[])
 	}
 #endif
 
+	init_dbus(&server, &dbus_source);
+	if (!server.conn) {
+		wlr_log (WLR_ERROR, "Unable to start dbus server");
+		ret = 1;
+		goto end;
+	}
+
 	if (optind < argc && !spawn_primary_client(&server, argv + optind, &pid, &sigchld_source)) {
 		ret = 1;
 		goto end;
@@ -612,6 +621,10 @@ end:
 	if (sigchld_source) {
 		wl_event_source_remove(sigchld_source);
 	}
+	if (dbus_source) {
+		wl_event_source_remove(dbus_source);
+	}
+
 	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
