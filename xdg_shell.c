@@ -185,6 +185,13 @@ destroy(struct cg_view *view)
 }
 
 static void
+close(struct cg_view *view) {
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+
+	wlr_xdg_toplevel_send_close(xdg_shell_view->xdg_toplevel);
+}
+
+static void
 handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
@@ -257,6 +264,7 @@ static const struct cg_view_impl xdg_shell_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
+	.close = close,
 };
 
 void

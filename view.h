@@ -41,9 +41,10 @@ struct cg_view_impl {
 	bool (*is_transient_for)(struct cg_view *child, struct cg_view *parent);
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
+	void (*close)(struct cg_view *view);
 	void (*destroy)(struct cg_view *view);
 };
-
+void raise_view(struct cg_server* server, char *title);
 char *view_get_title(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
@@ -54,6 +55,7 @@ void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);
 void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type, const struct cg_view_impl *impl);
+void view_close(struct cg_view *view);
 
 struct cg_view *view_from_wlr_surface(struct wlr_surface *surface);
 

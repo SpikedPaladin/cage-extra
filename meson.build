@@ -39,6 +39,8 @@ wlroots        = dependency('wlroots-0.18', fallback: ['wlroots', 'wlroots'])
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
+libinput       = dependency('libinput')
+dbus           = dependency('dbus-1')
 math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
@@ -112,6 +114,7 @@ endif
 
 cage_sources = [
   'cage.c',
+  'dbus.c',
   'idle_inhibit_v1.c',
   'output.c',
   'seat.c',
@@ -123,6 +126,7 @@ cage_headers = [
   configure_file(input: 'config.h.in',
                  output: 'config.h',
                  configuration: conf_data),
+  'dbus.h',
   'idle_inhibit_v1.h',
   'output.h',
   'seat.h',
@@ -144,6 +148,8 @@ executable(
     wayland_server,
     wlroots,
     xkbcommon,
+    libinput,
+    dbus,
     math,
   ],
   install: true,

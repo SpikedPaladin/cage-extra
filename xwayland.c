@@ -103,6 +103,13 @@ destroy(struct cg_view *view)
 }
 
 static void
+close(struct cg_view *view)
+{
+	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+	wlr_xwayland_surface_close(xwayland_view->xwayland_surface);
+}
+
+static void
 handle_xwayland_surface_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
@@ -154,6 +161,7 @@ static const struct cg_view_impl xwayland_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
+	.close = close,
 };
 
 void

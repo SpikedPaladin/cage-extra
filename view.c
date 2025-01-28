@@ -24,6 +24,16 @@
 #include "xwayland.h"
 #endif
 
+void raise_view(struct cg_server* server, char *title) {
+	struct cg_view *view;
+	wl_list_for_each (view, &server->views, link) {
+		if (strcmp(view_get_title(view), title) == 0) {
+			view_position(view);
+			wlr_scene_node_raise_to_top(&view->scene_tree->node);
+		}
+	}
+}
+
 char *
 view_get_title(struct cg_view *view)
 {
@@ -94,6 +104,46 @@ view_position(struct cg_view *view)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
 
+	char *title = view_get_title(view);
+
+	if (strcmp(title, "KioskOverlay") == 0) {
+		if (view->server->mode != NONE) {
+			layout_box.width = layout_box.width / 2;
+			if (view->server->side == RIGHT) {
+				layout_box.x = 0;
+			} else {
+				layout_box.x = layout_box.width;
+			}
+		}
+	} else if (strcmp(title, "Kiosk") != 0) {
+		if (view->server->mode == ANDROID) {
+			layout_box.x = -layout_box.width / 4;
+
+			if (view->server->side == RIGHT) {
+				layout_box.x = (layout_box.width / 2) - (layout_box.width / 4);
+			}
+		} else if (view->server->mode == OTHER) {
+			layout_box.width = layout_box.width / 2;
+
+			if (view->server->side == RIGHT) {
+				layout_box.x = layout_box.width;
+			}
+		}
+	}
+
+	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
+		view_maximize(view, &layout_box);
+	} else {
+		view_center(view, &layout_box);
+	}
+}
+
+void
+view_position_root(struct cg_view *view)
+{
+	struct wlr_box layout_box;
+	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
+
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
 	} else {
@@ -145,6 +195,12 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 
 	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);
+
+	if (strcmp(view_get_title(view), "KioskOverlay") == 0) {
+		raise_view(view->server, "Kiosk");
+	} else if (strcmp(view_get_title(view), "Kiosk") != 0 && view->server->mode != NONE) {
+		raise_view(view->server, "KioskOverlay");
+	}
 }
 
 void
@@ -163,7 +219,24 @@ view_destroy(struct cg_view *view)
 	if (!empty) {
 		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
 		seat_set_focus(server->seat, prev);
+
+		DBusMessage *sig = NULL;
+		sig = dbus_message_new_signal(
+			"/me/paladin/Cage",
+			"me.paladin.Cage",
+			"WindowClosed"
+		);
+
+		if (!sig) return;
+
+		dbus_connection_send(server->conn, sig, NULL);
+		dbus_message_unref(sig);
 	}
+}
+
+void
+view_close(struct cg_view *view) {
+	view->impl->close(view);
 }
 
 void
