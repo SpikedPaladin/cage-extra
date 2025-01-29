@@ -62,6 +62,18 @@
 #include "xwayland.h"
 #endif
 
+struct SpawnInfo {
+	struct cg_server *server;
+	pid_t *pid_out;
+	struct wl_event_source **sigchld_source;
+	char **argv;
+};
+
+static bool
+spawn_primary_client(struct SpawnInfo *spawn_info);
+static int
+cleanup_primary_client(pid_t pid);
+
 void
 server_terminate(struct cg_server *server)
 {
@@ -83,7 +95,7 @@ handle_display_destroy(struct wl_listener *listener, void *data)
 static int
 sigchld_handler(int fd, uint32_t mask, void *data)
 {
-	struct cg_server *server = data;
+	struct SpawnInfo *spawn_info = data;
 
 	/* Close Cage's read pipe. */
 	close(fd);
@@ -94,8 +106,12 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 		wlr_log(WLR_DEBUG, "Connection closed by server");
 	}
 
-	server->return_app_code = true;
-	server_terminate(server);
+	wl_event_source_remove(*spawn_info->sigchld_source);
+	cleanup_primary_client(*spawn_info->pid_out);
+	spawn_primary_client(spawn_info);
+
+	//server->return_app_code = true;
+	//server_terminate(server);
 	return 0;
 }
 
@@ -119,7 +135,7 @@ set_cloexec(int fd)
 }
 
 static bool
-spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, struct wl_event_source **sigchld_source)
+spawn_primary_client(struct SpawnInfo *spawn_info)
 {
 	int fd[2];
 	if (pipe(fd) != 0) {
@@ -134,7 +150,7 @@ spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, str
 		sigprocmask(SIG_SETMASK, &set, NULL);
 		/* Close read, we only need write in the primary client process. */
 		close(fd[0]);
-		execvp(argv[0], argv);
+		execvp(spawn_info->argv[0], spawn_info->argv);
 		/* execvp() returns only on failure */
 		wlr_log_errno(WLR_ERROR, "Failed to spawn client");
 		_exit(1);
@@ -144,7 +160,7 @@ spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, str
 	}
 
 	/* Set this early so that if we fail, the client process will be cleaned up properly. */
-	*pid_out = pid;
+	*spawn_info->pid_out = pid;
 
 	if (!set_cloexec(fd[0]) || !set_cloexec(fd[1])) {
 		return false;
@@ -153,9 +169,9 @@ spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, str
 	/* Close write, we only need read in Cage. */
 	close(fd[1]);
 
-	struct wl_event_loop *event_loop = wl_display_get_event_loop(server->wl_display);
+	struct wl_event_loop *event_loop = wl_display_get_event_loop(spawn_info->server->wl_display);
 	uint32_t mask = WL_EVENT_HANGUP | WL_EVENT_ERROR;
-	*sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, server);
+	*spawn_info->sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, spawn_info);
 
 	wlr_log(WLR_DEBUG, "Child process created with pid %d", pid);
 	return true;
@@ -596,7 +612,14 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	if (optind < argc && !spawn_primary_client(&server, argv + optind, &pid, &sigchld_source)) {
+
+	struct SpawnInfo *spawn_info = malloc(sizeof(struct SpawnInfo));
+	spawn_info->pid_out = &pid;
+	spawn_info->server = &server;
+	spawn_info->sigchld_source = &sigchld_source;
+	spawn_info->argv = argv + optind;
+
+	if (optind < argc && !spawn_primary_client(spawn_info)) {
 		ret = 1;
 		goto end;
 	}
