@@ -30,12 +30,7 @@ const char *server_introspection_xml =
 						  "  <interface name='me.paladin.Cage'>\n"
 						  "    <property name='Version' type='s' access='read' />\n"
 						  "    <method name='Windows' >\n"
-						  "    </method>\n"
-						  "    <method name='Echo'>\n"
-						  "      <arg name='string' direction='in' type='s'/>\n"
-						  "      <arg type='s' direction='out' />\n"
-						  "    </method>\n"
-						  "    <method name='EmitSignal'>\n"
+						  "      <arg type='i' direction='out' />\n"
 						  "    </method>\n"
 						  "    <method name='Close'>\n"
 						  "    </method>\n"
@@ -47,8 +42,6 @@ const char *server_introspection_xml =
 						  "    <method name='SideRight'/>\n"
 						  "    <method name='Quit'>\n"
 						  "    </method>\n"
-						  "    <signal name='OnEmitSignal'>\n"
-						  "    </signal>"
 						  "  </interface>\n"
 
 						  "</node>\n";
@@ -147,39 +140,13 @@ server_message_handler(DBusConnection *conn, DBusMessage *message, void *data)
 	} else if (dbus_message_is_method_call(message, DBUS_INTERFACE_PROPERTIES, "GetAll")) {
 		reply = dbus_message_new_method_return(message);
 	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Windows")) {
-		printf("%d\n", wl_list_length(&server->views));
-
-		struct cg_view *view;
-		wl_list_for_each(view, &server->views, link) {
-			printf("%s\n", view_get_title(view));
-		}
+		int count = wl_list_length(&server->views);
 
 		if (!(reply = dbus_message_new_method_return(message)))
 			goto fail;
 
-	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Echo")) {
-		const char *msg;
-
-		if (!dbus_message_get_args(message, &err, DBUS_TYPE_STRING, &msg, DBUS_TYPE_INVALID))
-			goto fail;
-
-		if (!(reply = dbus_message_new_method_return(message)))
-			goto fail;
-
-		dbus_message_append_args(reply, DBUS_TYPE_STRING, &msg, DBUS_TYPE_INVALID);
-
-	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "EmitSignal")) {
-
-		if (!(reply = dbus_message_new_signal("/me/paladin/Cage", "me.paladin.Cage",
-						      "OnEmitSignal")))
-			goto fail;
-
-		if (!dbus_connection_send(conn, reply, NULL))
-			return DBUS_HANDLER_RESULT_NEED_MEMORY;
-
-		/* Send a METHOD_RETURN reply. */
-		reply = dbus_message_new_method_return(message);
-	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Close")) {
+		dbus_message_append_args (reply, DBUS_TYPE_INT32, &count, DBUS_TYPE_INVALID);
+	}else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Close")) {
 		struct cg_view *view;
 		wl_list_for_each_reverse (view, &server->views, link) {
 			if (strcmp(view_get_title(view), "Kiosk") == 0 || strcmp(view_get_title(view), "KioskOverlay") == 0)
@@ -238,6 +205,10 @@ server_message_handler(DBusConnection *conn, DBusMessage *message, void *data)
 		server->side = RIGHT;
 
 		reply = dbus_message_new_method_return(message);
+	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Quit")) {
+		reply = dbus_message_new_method_return(message);
+
+		server_terminate(server);
 	} else
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
