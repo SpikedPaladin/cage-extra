@@ -106,23 +106,8 @@ view_position(struct cg_view *view)
 
 	char *title = view_get_title(view);
 
-	if (strcmp(title, "KioskOverlay") == 0) {
-		if (view->server->mode != NONE) {
-			layout_box.width = layout_box.width / 2;
-			if (view->server->side == RIGHT) {
-				layout_box.x = 0;
-			} else {
-				layout_box.x = layout_box.width;
-			}
-		}
-	} else if (strcmp(title, "Kiosk") != 0) {
-		if (view->server->mode == ANDROID) {
-			layout_box.x = -layout_box.width / 4;
-
-			if (view->server->side == RIGHT) {
-				layout_box.x = (layout_box.width / 2) - (layout_box.width / 4);
-			}
-		} else if (view->server->mode == OTHER) {
+	if (strcmp(title, "Kiosk") != 0) {
+		if (view->server->mode == OTHER) {
 			layout_box.width = layout_box.width / 2;
 
 			if (view->server->side == RIGHT) {
@@ -195,12 +180,6 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 
 	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);
-
-	if (strcmp(view_get_title(view), "KioskOverlay") == 0) {
-		raise_view(view->server, "Kiosk");
-	} else if (strcmp(view_get_title(view), "Kiosk") != 0 && view->server->mode != NONE) {
-		raise_view(view->server, "KioskOverlay");
-	}
 }
 
 void

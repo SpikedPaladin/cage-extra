@@ -36,7 +36,6 @@ const char *server_introspection_xml =
 						  "    </method>\n"
 						  "    <method name='Flip'/>\n"
 						  "    <method name='EnableSplit'/>\n"
-						  "    <method name='AndroidSplit'/>\n"
 						  "    <method name='DisableSplit'/>\n"
 						  "    <method name='SideLeft'/>\n"
 						  "    <method name='SideRight'/>\n"
@@ -177,20 +176,12 @@ server_message_handler(DBusConnection *conn, DBusMessage *message, void *data)
 			break;
 		}
 		reply = dbus_message_new_method_return(message);
-	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Overlay")) {
-		raise_view(server, "KioskOverlay");
-
-		reply = dbus_message_new_method_return(message);
 	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "Raise")) {
 		raise_view(server, "Kiosk");
 
 		reply = dbus_message_new_method_return(message);
 	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "EnableSplit")) {
 		server->mode = OTHER;
-
-		reply = dbus_message_new_method_return(message);
-	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "AndroidSplit")) {
-		server->mode = ANDROID;
 
 		reply = dbus_message_new_method_return(message);
 	} else if (dbus_message_is_method_call(message, "me.paladin.Cage", "DisableSplit")) {

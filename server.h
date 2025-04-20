@@ -23,7 +23,6 @@ enum cg_multi_output_mode {
 
 enum SplitMode {
 	NONE,
-	ANDROID,
 	OTHER,
 };
 
